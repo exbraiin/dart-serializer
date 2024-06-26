@@ -28,8 +28,6 @@ extension BinaryWriterDartExt on BinaryWriter {
   void writeDateTime(DateTime obj) {
     writeUint32(obj.microsecondsSinceEpoch);
   }
-
-  void writeSet<T>(Set<T> obj) {}
 }
 
 extension BinaryReaderDartExt on BinaryReader {

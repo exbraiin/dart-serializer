@@ -19,8 +19,8 @@ abstract final class BinaryBox<T> {
       writer: (w, o) => w.writeBool(o),
     );
     registerWrapper<double>(
-      reader: (r) => r.readFloat64(),
-      writer: (w, o) => w.writeFloat64(o),
+      reader: (r) => r.readDouble(),
+      writer: (w, o) => w.writeDouble(o),
     );
     registerWrapper<String>(
       reader: (r) => r.readString(),
@@ -85,7 +85,14 @@ abstract final class BinaryBox<T> {
     );
   }
 
+  static BinaryAdapter<T> getAdapter<T>() {
+    final adapter = _adapters[T];
+    if (adapter == null) throw BinaryAdapterNotFound<T>();
+    return adapter as BinaryAdapter<T>;
+  }
+
   static Future<DataBox<E>> openBox<E>(String name) async {
+    getAdapter<E>();
     var box = _boxes[name];
     if (box == null) {
       final path = '${_path.replaceAll('\\', '/')}/$name.box';
@@ -96,22 +103,6 @@ abstract final class BinaryBox<T> {
   }
 
   Future<void> _load();
-
-  T _read(BinaryReader reader) {
-    final adapter = _adapters[T];
-    if (adapter == null) {
-      throw BinaryAdapterNotFound<T>();
-    }
-    return adapter.read(reader) as T;
-  }
-
-  void _write(BinaryWriter writer, T obj) {
-    final adapter = _adapters[T];
-    if (adapter == null) {
-      throw BinaryAdapterNotFound<T>();
-    }
-    return adapter.write(writer, obj);
-  }
 }
 
 final class DataBox<T> extends BinaryBox<T> {
@@ -133,7 +124,7 @@ final class DataBox<T> extends BinaryBox<T> {
     final length = reader.readUint32();
     for (var i = 0; i < length; ++i) {
       final key = reader.readString();
-      _objects[key] = _read(reader);
+      _objects[key] = BinaryBox.getAdapter<T>().read(reader);
     }
   }
 
@@ -167,7 +158,7 @@ final class DataBox<T> extends BinaryBox<T> {
     writer.writeUint32(length);
     for (final entry in _objects.entries) {
       writer.writeString(entry.key);
-      _write(writer, entry.value);
+      BinaryBox.getAdapter<T>().write(writer, entry.value);
     }
     await file.writeAsBytes(writer.bytes);
   }
